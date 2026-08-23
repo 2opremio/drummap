@@ -4,72 +4,60 @@ Give the notes in a MusicXML drum part their sounds.
 
 ## The problem
 
-MusicXML keeps a percussion note's *appearance* and its *sound* in separate
-places, and only one of them is obvious.
+A drum score says two things about every note: where the notehead sits, and
+which drum it is. They are independent. A notehead on the top space is not a
+hi-hat because of where it sits; it is a hi-hat because the file says so.
 
-Appearance is `<unpitched>` with a `display-step` and `display-octave`, which
-say where the notehead sits on the staff. Sound comes from an `<instrument>`
-reference on the note, pointing at a `<score-instrument>` whose paired
-`<midi-instrument>` carries the MIDI drum number.
+Some exporters write only the first. You open the score and it looks perfect,
+because the noteheads are in the right places. Then you press play and it is a
+melody, because nothing in the file ever said "hi-hat", and without that the
+positions are just pitches.
 
-Some exporters write a drum part as ordinary pitched notes and declare no
-instruments at all:
-
-```xml
-<part-list>
-  <score-part id="P1"><part-name>Drums</part-name></score-part>
-</part-list>
-...
-<note>
-  <pitch><step>G</step><octave>5</octave></pitch>
-  <notehead>x</notehead>
-</note>
-```
-
-That opens looking perfect, because those staff positions are where drums are
-drawn, and plays as a melody, because G5 is a pitch. Ticking a drumset box in
-your notation software will not rescue it: a drumset staff maps *MIDI pitch* to
-drum sound, and G5 is MIDI 79, which is not a drum.
+Changing the instrument to a drumset in your notation software will not fix it.
+A drumset staff decides what to play from the note itself, and the notes are
+melodic ones, so it has nothing to work with.
 
 ## What it does
 
-Rewrites each pitched note as unpitched, keeping its written position exactly,
-so the page looks identical. Then it declares one instrument per drum in use and
-points every note at the right one.
+Fills in the missing half. Every note keeps exactly the position it had, so the
+page looks identical, and gains the drum it should have been all along.
 
 ```bash
 python -m drummap --survey score.xml     # see what is in the file
 python -m drummap score.xml -o fixed.xml
 ```
 
-`--survey` lists every position and notehead found, with counts and the drum
-each would map to:
+Start with `--survey`. It lists every position and notehead in the file, how
+often each appears, and the drum it would become:
 
 ```
   F4  normal      228  Bass Drum
   C5  normal      223  Snare
   G5  x           190  Closed Hi-Hat
-  A5  x            44  Ride Cymbal
-  B5  x            14  Crash Cymbal
+  A5  x            44  Crash Cymbal
+  B5  x            14  Crash Cymbal 2
 ```
 
-The map is keyed on position *and* notehead, because position alone is
-ambiguous: a cymbal and a tom can share a line and differ only by an x head.
-
-Transcribers disagree most about which line above the staff is ride and which is
-crash, so check those two and override if needed:
+Read that before converting. The counts tell you whether a guess is right: a
+ride keeps time and lands four or more times a bar, a crash is an accent and
+lands once. If a line is wrong, override it:
 
 ```bash
-python -m drummap score.xml --map A5:x=49 --map B5:x=51
+python -m drummap score.xml --map A5:x=51
 ```
 
-A note the map has no entry for stops the conversion rather than being guessed,
-because a wrong guess is something you would only find by ear.
+A position the map does not know stops the conversion rather than being guessed,
+because a wrong drum is something you would only discover by ear.
 
-## Notes
+## The default kit
 
-`<midi-unpitched>` counts MIDI notes from 1, so the number written for a kick is
-37, not 36. Getting that wrong puts every drum one slot out.
+The full five-piece plus cymbals, on the usual drumset positions: kick, snare
+and cross stick, four toms, closed, open and pedal hi-hat, ride and ride bell,
+two crashes, china, splash, cowbell and tambourine. Noteheads matter, since ride
+and high tom share the top line and differ only by an x.
+
+Transcribers disagree most about which line above the staff is which cymbal, so
+that is the part worth checking with `--survey` on a new score.
 
 Defaults are General MIDI on channel 10.
 
