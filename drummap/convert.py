@@ -11,7 +11,7 @@ that validate will reject a note whose children are in the wrong order.
 
 import xml.etree.ElementTree as ET
 
-from .mapping import DEFAULT_MAP
+from .mapping import BY_MIDI, DEFAULT_MAP
 
 # Where each child sits inside <note>, per the MusicXML note content model.
 # Anything unlisted keeps its relative order after these.
@@ -110,7 +110,11 @@ def convert(tree, drum_map=None, part_name="Drumset"):
         ET.SubElement(note, "instrument").set("id", _instrument_id(root, drum))
         _reorder(note, NOTE_ORDER)
 
-    _declare_instruments(root, used, part_name)
+    # Declare the whole kit, not just the drums this score happens to use.
+    # A reader builds its drum palette from what is declared, so a file naming
+    # five drums leaves the user no correct slot to enter a sixth from.
+    whole_kit = {**BY_MIDI, **{d.midi: d for d in drum_map.values()}}
+    _declare_instruments(root, whole_kit, part_name)
     return used
 
 

@@ -54,8 +54,12 @@ def test_each_note_points_at_its_drum():
     convert(tree)
     notes = [n for n in tree.getroot().iter("note") if n.find("unpitched") is not None]
     assert [n.find("instrument").get("id") for n in notes] == ["P1-36", "P1-42"]
+    # The whole kit is declared, so the reader offers every drum for entry.
     declared = {si.get("id") for si in tree.getroot().iter("score-instrument")}
-    assert declared == {"P1-36", "P1-42"}
+    assert {"P1-36", "P1-42"} <= declared
+    assert "P1-51" in declared, "a drum the score does not use is still offered"
+    ids = [mi.get("id") for mi in tree.getroot().iter("midi-instrument")]
+    assert sorted(ids) == sorted(declared), "every declared drum needs a sound"
 
 
 def test_rests_are_left_alone():

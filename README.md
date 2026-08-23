@@ -56,6 +56,11 @@ and cross stick, four toms, closed, open and pedal hi-hat, ride and ride bell,
 two crashes, china, splash, cowbell and tambourine. Noteheads matter, since ride
 and high tom share the top line and differ only by an x.
 
+The whole kit is written into the file, not just the drums the score uses.
+Notation software builds its drum palette from what the file declares, so a
+score using five drums would otherwise leave you no correct slot to enter a
+sixth from, and the note you added would play as something else.
+
 Transcribers disagree most about which line above the staff is which cymbal, so
 that is the part worth checking with `--survey` on a new score.
 
