@@ -7,6 +7,7 @@ import xml.etree.ElementTree as ET
 
 from .convert import Unmapped, convert, survey
 from .mapping import DEFAULT_MAP, parse_overrides
+from .musescore import load_kit
 
 # ElementTree drops the doctype, and some readers want it. Carried across
 # verbatim from the input rather than reconstructed.
@@ -37,17 +38,35 @@ def main(argv=None):
                    help="list the positions and noteheads found, and stop")
     p.add_argument("--map", action="append", default=[], metavar="POS[:HEAD]=MIDI",
                    help="override one entry, e.g. A5:x=49")
+    p.add_argument("--kit", metavar="FILE.drm",
+                   help="take the map from a MuseScore kit instead of the defaults")
     p.add_argument("--part-name", default="Drumset")
     args = p.parse_args(argv)
 
     tree = ET.parse(args.input)
+    overrides = parse_overrides(args.map)
+
+    ambiguous = {}
+    if args.kit:
+        from_kit, ambiguous = load_kit(args.kit)
+        overrides = {**from_kit, **overrides}
+
+    # Only an ambiguity the score actually lands on has to be settled.
+    unsettled = {k: v for k, v in ambiguous.items()
+                 if k in survey(tree) and k not in overrides}
+    if unsettled:
+        for (pos, head), drums in sorted(unsettled.items()):
+            options = ", ".join(f"{d.midi} {d.name}" for d in drums)
+            print(f"drummap: {pos} ({head}) could be {options}", file=sys.stderr)
+        print("the kit puts several drums there; choose with "
+              "--map POSITION:NOTEHEAD=MIDI", file=sys.stderr)
+        return 1
 
     if args.survey:
         found = survey(tree)
         if not found:
             print("no pitched notes: this part is already unpitched")
             return 0
-        overrides = parse_overrides(args.map)
         table = {**DEFAULT_MAP, **overrides}
         width = max(len(pos) for pos, _ in found)
         for (pos, head), count in sorted(found.items(), key=lambda kv: -kv[1]):
@@ -57,7 +76,7 @@ def main(argv=None):
         return 0
 
     try:
-        used = convert(tree, parse_overrides(args.map), args.part_name)
+        used = convert(tree, overrides, args.part_name)
     except Unmapped as e:
         print(f"drummap: {e}", file=sys.stderr)
         print("run with --survey to see what is in the file, "

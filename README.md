@@ -49,6 +49,30 @@ python -m drummap score.xml --map A5:x=51
 A position the map does not know stops the conversion rather than being guessed,
 because a wrong drum is something you would only discover by ear.
 
+## Using a kit you already have
+
+If you have a MuseScore kit you like, take the map from it rather than the
+defaults. A `.drm` already records which line and notehead each drum uses,
+which is the same correspondence, written the other way round:
+
+```bash
+python -m drummap score.xml --kit mykit.drm
+```
+
+Kits routinely put several drums on one line and notehead: acoustic and
+electric snare, the two floor toms, china and splash and second crash. Where the
+score lands on one of those, drummap stops and lists the candidates rather than
+choosing, since choosing is how a crash becomes a ride:
+
+```
+drummap: B5 (x) could be 52 Chinese Cymbal, 55 Splash Cymbal, 57 Crash Cymbal 2
+```
+
+Settle it with `--map B5:x=57`. Positions the score never uses are left alone.
+
+Note that `.drm` is MuseScore's own format, not an interchange one, so it is
+useful as a source for the map but not as a fix in itself.
+
 ## The default kit
 
 The full five-piece plus cymbals, on the usual drumset positions: kick, snare
